@@ -1,0 +1,13 @@
+version: 1
+frontend:
+  phases:
+    build:
+      commands:
+        - echo "Static site — nothing to build"
+  artifacts:
+    # Serve the repo root as-is (plain HTML/CSS/JS, no bundler)
+    baseDirectory: /
+    files:
+      - '**/*'
+  cache:
+    paths: []

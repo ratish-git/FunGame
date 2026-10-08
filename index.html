@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#ffd1e8" />
+  <title>Ratish &amp; Sohani — Gender Reveal 🎉</title>
+  <meta name="description" content="Join Ratish & Sohani's gender reveal! Pop a balloon or scratch the card to find out, and leave your wishes." />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+  <!-- ===== GUEST VIEW ===== -->
+  <main id="guest-view" class="screen">
+    <header class="hero">
+      <div class="hero-emoji" aria-hidden="true">🎈🎉👶</div>
+      <h1 class="couple">Ratish <span>&amp;</span> Sohani</h1>
+      <p class="tagline">Boy or Girl? Come find out!</p>
+    </header>
+
+    <!-- Step 1: Name -->
+    <section id="step-name" class="card step">
+      <h2>Welcome! 💕</h2>
+      <p>Enter your name to join the reveal.</p>
+      <input id="guest-name" type="text" placeholder="Your name" maxlength="40" autocomplete="name" />
+      <button id="name-continue" class="btn btn-primary">Let's go! 🎈</button>
+      <p id="name-error" class="error" hidden>Please enter your name first.</p>
+    </section>
+
+    <!-- Step 2: Choose reveal style -->
+    <section id="step-choose" class="card step" hidden>
+      <h2>Hi <span class="guest-greet"></span>! 👋</h2>
+      <p>How do you want to reveal the surprise?</p>
+      <div class="choice-grid">
+        <button class="choice" data-mode="balloon">
+          <span class="choice-emoji">🎈</span>
+          <span>Pop a Balloon</span>
+        </button>
+        <button class="choice" data-mode="scratch">
+          <span class="choice-emoji">🎟️</span>
+          <span>Scratch the Card</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Step 3a: Balloon pop -->
+    <section id="step-balloon" class="card step" hidden>
+      <h2>Pop the balloons! 🎈</h2>
+      <p>Tap balloons to pop them. The surprise is hiding inside one!</p>
+      <div id="balloon-field" class="balloon-field" role="group" aria-label="Balloons to pop"></div>
+    </section>
+
+    <!-- Step 3b: Scratch card -->
+    <section id="step-scratch" class="card step" hidden>
+      <h2>Scratch to reveal 🎟️</h2>
+      <p>Drag your finger or mouse across the card.</p>
+      <div class="scratch-wrap">
+        <div id="scratch-result" class="scratch-result"></div>
+        <canvas id="scratch-canvas" width="320" height="200"></canvas>
+      </div>
+    </section>
+
+    <!-- Step 4: Reveal result -->
+    <section id="step-reveal" class="card step" hidden>
+      <div id="reveal-badge" class="reveal-badge" aria-live="polite"></div>
+      <h2 id="reveal-title"></h2>
+      <p id="reveal-sub"></p>
+      <button id="to-wish" class="btn btn-primary">Leave a wish 💌</button>
+    </section>
+
+    <!-- Step 5: Wish -->
+    <section id="step-wish" class="card step" hidden>
+      <h2>Leave your wish 💌</h2>
+      <p>Share a message for Ratish &amp; Sohani and the little one.</p>
+      <textarea id="wish-text" placeholder="Write your wish here..." maxlength="300" rows="4"></textarea>
+      <button id="submit-wish" class="btn btn-primary">Send wish ✨</button>
+      <p id="wish-status" class="status" hidden></p>
+    </section>
+
+    <!-- Step 6: Thank you + wall of wishes -->
+    <section id="step-thanks" class="card step" hidden>
+      <div class="hero-emoji" aria-hidden="true">💖</div>
+      <h2>Thank you, <span class="guest-greet"></span>!</h2>
+      <p>Your wish has been added to the wall.</p>
+      <h3 class="wall-title">Wishes from everyone 💐</h3>
+      <ul id="wish-wall" class="wish-wall"></ul>
+    </section>
+
+    <footer class="foot">
+      <button id="open-admin" class="link-btn">Admin</button>
+    </footer>
+  </main>
+
+  <!-- ===== ADMIN VIEW ===== -->
+  <section id="admin-view" class="screen" hidden>
+    <div class="card">
+      <h2>Admin 🔐</h2>
+
+      <div id="admin-login">
+        <p>Enter the admin password.</p>
+        <input id="admin-pass" type="password" placeholder="Password" />
+        <button id="admin-login-btn" class="btn btn-primary">Unlock</button>
+        <p id="admin-error" class="error" hidden>Wrong password.</p>
+      </div>
+
+      <div id="admin-panel" hidden>
+        <h3>The answer</h3>
+        <p>Set what guests will reveal.</p>
+        <div class="choice-grid">
+          <button class="choice answer-choice" data-answer="boy">
+            <span class="choice-emoji">👦</span><span>It's a Boy</span>
+          </button>
+          <button class="choice answer-choice" data-answer="girl">
+            <span class="choice-emoji">👧</span><span>It's a Girl</span>
+          </button>
+        </div>
+        <p id="answer-status" class="status">Current answer: <strong id="current-answer">loading…</strong></p>
+
+        <h3 class="wall-title">Guest wishes</h3>
+        <button id="refresh-wishes" class="btn btn-secondary">Refresh</button>
+        <ul id="admin-wish-wall" class="wish-wall"></ul>
+      </div>
+
+      <button id="close-admin" class="link-btn">← Back to party</button>
+    </div>
+  </section>
+
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
