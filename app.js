@@ -200,18 +200,31 @@
     const result = $("#scratch-result");
     const ctx = canvas.getContext("2d");
 
+    // Match the canvas drawing buffer to its actual rendered size so that
+    // touch/mouse coordinates line up exactly on any screen size.
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = rect.width || 320;
+    const cssH = rect.height || 200;
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    ctx.scale(dpr, dpr); // now we can draw using CSS pixel units
+
+    // Brush radius scales a little with screen size
+    const brush = Math.max(18, Math.min(28, cssW / 12));
+
     // underlying result styled by answer
     const isBoy = state.answer === "boy";
     result.innerHTML = `<div style="font-size:52px">${isBoy ? "👦" : "👧"}</div>
       <div class="${isBoy ? "theme-boy" : "theme-girl"}">${isBoy ? "It's a Boy!" : "It's a Girl!"}</div>`;
 
-    // scratch-off cover
+    // scratch-off cover (drawn in CSS-pixel coordinates)
     ctx.fillStyle = "#c9a0dc";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, cssW, cssH);
     ctx.fillStyle = "rgba(255,255,255,0.85)";
     ctx.font = "bold 20px Segoe UI, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Scratch here!", canvas.width / 2, canvas.height / 2);
+    ctx.fillText("Scratch here!", cssW / 2, cssH / 2);
     ctx.globalCompositeOperation = "destination-out";
 
     let drawing = false;
@@ -219,14 +232,18 @@
 
     const pos = (e) => {
       const r = canvas.getBoundingClientRect();
-      const p = e.touches ? e.touches[0] : e;
-      return { x: p.clientX - r.left, y: p.clientY - r.top };
+      const p = e.touches && e.touches[0] ? e.touches[0] : e;
+      // scale pointer position into the canvas's CSS-pixel space
+      return {
+        x: ((p.clientX - r.left) / r.width) * cssW,
+        y: ((p.clientY - r.top) / r.height) * cssH,
+      };
     };
     const scratch = (e) => {
       if (!drawing) return;
       const { x, y } = pos(e);
       ctx.beginPath();
-      ctx.arc(x, y, 22, 0, Math.PI * 2);
+      ctx.arc(x, y, brush, 0, Math.PI * 2);
       ctx.fill();
       if (!cleared && clearedEnough(ctx, canvas)) {
         cleared = true;
