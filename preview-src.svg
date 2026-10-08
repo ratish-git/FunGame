@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7a0f2b"/>
+      <stop offset="0.55" stop-color="#5c0a20"/>
+      <stop offset="1" stop-color="#3a1a5e"/>
+    </linearGradient>
+    <radialGradient id="glowB" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#eaf2ff"/>
+      <stop offset="1" stop-color="#eaf2ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <!-- soft gold glows -->
+  <circle cx="150" cy="110" r="220" fill="#e9b949" opacity="0.10"/>
+  <circle cx="1050" cy="520" r="240" fill="#e9b949" opacity="0.10"/>
+
+  <!-- gold frame -->
+  <rect x="26" y="26" width="1148" height="578" rx="26" fill="none" stroke="#e9b949" stroke-width="3"/>
+  <rect x="40" y="40" width="1120" height="550" rx="20" fill="none" stroke="#e9b949" stroke-width="1" opacity="0.5"/>
+
+  <!-- alpana dots in corners -->
+  <g fill="#f4d58d" opacity="0.65">
+    <circle cx="70" cy="70" r="5"/><circle cx="100" cy="70" r="5"/><circle cx="70" cy="100" r="5"/>
+    <circle cx="1130" cy="70" r="5"/><circle cx="1100" cy="70" r="5"/><circle cx="1130" cy="100" r="5"/>
+    <circle cx="70" cy="560" r="5"/><circle cx="100" cy="560" r="5"/><circle cx="70" cy="530" r="5"/>
+    <circle cx="1130" cy="560" r="5"/><circle cx="1100" cy="560" r="5"/><circle cx="1130" cy="530" r="5"/>
+  </g>
+
+  <!-- lotus top-center -->
+  <text x="600" y="135" text-anchor="middle" font-size="60">🪷</text>
+
+  <!-- Bengali headline -->
+  <text x="600" y="205" text-anchor="middle" font-family="'Noto Serif Bengali','Noto Sans Bengali',serif" font-size="46" font-weight="700" fill="#e9b949">শুভ আগমন</text>
+
+  <!-- couple names -->
+  <text x="600" y="300" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-size="86" font-weight="700" fill="#f4d58d">Ratish &amp; Sohani</text>
+
+  <!-- subtitle -->
+  <text x="600" y="355" text-anchor="middle" font-family="'Noto Sans Bengali',Arial,sans-serif" font-size="30" fill="#fff7e9" opacity="0.95">A new little one has arrived</text>
+
+  <!-- baby illustration (centered lower) -->
+  <g transform="translate(600,480) scale(1.25)">
+    <circle r="74" fill="url(#glowB)"/>
+    <path d="M-54 44 Q-60 -6 0 -14 Q60 -6 54 44 Q0 70 -54 44 Z" fill="#e9b949"/>
+    <path d="M-54 44 Q-60 -6 0 -14 Q60 -6 54 44 Q0 70 -54 44 Z" fill="none" stroke="#b8862f" stroke-width="2"/>
+    <circle cx="0" cy="-8" r="34" fill="#ffd9b8"/>
+    <path d="M-34 -10 Q-36 -48 0 -50 Q36 -48 34 -10 Q0 -22 -34 -10 Z" fill="#e9b949"/>
+    <path d="M-34 -10 Q0 -22 34 -10" fill="none" stroke="#b8862f" stroke-width="2"/>
+    <circle cx="0" cy="-50" r="6" fill="#fff7e9"/>
+    <path d="M-14 -8 q4 4 8 0" fill="none" stroke="#5a3a22" stroke-width="2" stroke-linecap="round"/>
+    <path d="M6 -8 q4 4 8 0" fill="none" stroke="#5a3a22" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="-18" cy="2" r="5" fill="#ffb3a1" opacity="0.6"/>
+    <circle cx="18" cy="2" r="5" fill="#ffb3a1" opacity="0.6"/>
+    <path d="M-7 8 q7 7 14 0" fill="none" stroke="#5a3a22" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>
