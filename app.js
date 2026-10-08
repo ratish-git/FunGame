@@ -1,5 +1,5 @@
 /* ============================================================
-   Ratish & Sohani — Gender Reveal
+   Ratish & Sohani — Shubho Aagomon (Baby Announcement)
    Single-page app. Shared data via Supabase (free tier).
    Falls back to localStorage when Supabase isn't configured.
    ============================================================ */
@@ -39,6 +39,203 @@
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
   const show = (el) => el && el.removeAttribute("hidden");
   const hide = (el) => el && el.setAttribute("hidden", "");
+
+  // ============================================================
+  //  AUDIO — synthesized, Bengali-themed ambience + effects
+  //  (Web Audio API; no files, safe to deploy. Autoplay-safe:
+  //   starts only after the first user interaction.)
+  // ============================================================
+  const audio = (function () {
+    let ctx = null;
+    let master = null;
+    let droneGain = null;
+    let muted = false;
+    let started = false;
+    let scratchLast = 0;
+
+    // A soft raga-like scale (C, D, E, G, A, high C) in Hz — pleasant & Indian-flavoured.
+    const SCALE = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25];
+
+    function ensure() {
+      if (ctx) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ctx = new AC();
+      master = ctx.createGain();
+      master.gain.value = muted ? 0 : 0.9;
+      master.connect(ctx.destination);
+    }
+
+    // Gentle tanpura-like drone (two detuned low notes + slow shimmer).
+    function startDrone() {
+      if (!ctx || droneGain) return;
+      droneGain = ctx.createGain();
+      droneGain.gain.value = 0;
+      droneGain.connect(master);
+      // soft fade-in
+      droneGain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 2.5);
+
+      [130.81, 196.0].forEach((f, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = f;
+        const g = ctx.createGain();
+        g.gain.value = i === 0 ? 0.6 : 0.4;
+        // slow tremolo for a living, breathing pad
+        const lfo = ctx.createOscillator();
+        lfo.frequency.value = 0.12 + i * 0.05;
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 0.25;
+        lfo.connect(lfoGain);
+        lfoGain.connect(g.gain);
+        osc.connect(g);
+        g.connect(droneGain);
+        osc.start();
+        lfo.start();
+      });
+    }
+
+    // A gentle looping melody (soft plucked notes on a raga-like scale) that
+    // plays continuously in the background, layered over the drone.
+    let melodyTimer = null;
+    // Note indices into SCALE (-1 = rest). A calm, lilting phrase that loops.
+    const MELODY = [0, 2, 3, 4, 3, 2, 0, -1, 2, 4, 5, 4, 3, 2, -1, 0];
+    const NOTE_MS = 620; // tempo (ms per step)
+
+    function pluck(freq, vol) {
+      if (!ctx || muted) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      // a soft sine sub-layer for warmth
+      const osc2 = ctx.createOscillator();
+      osc2.type = "sine";
+      osc2.frequency.value = freq / 2;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(vol, now + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 2200;
+      osc.connect(lp);
+      osc2.connect(lp);
+      lp.connect(g);
+      g.connect(master);
+      osc.start(now);
+      osc2.start(now);
+      osc.stop(now + 1.5);
+      osc2.stop(now + 1.5);
+    }
+
+    function startMelody() {
+      if (melodyTimer) return;
+      let step = 0;
+      melodyTimer = setInterval(() => {
+        if (muted) return; // keep the clock, just stay silent while muted
+        const idx = MELODY[step % MELODY.length];
+        if (idx >= 0) {
+          // middle-octave melody, soft
+          pluck(SCALE[idx] * 2, 0.045);
+          // occasional gentle harmony a third below
+          if (step % 4 === 0 && idx > 1) pluck(SCALE[idx - 2], 0.03);
+        }
+        step++;
+      }, NOTE_MS);
+    }
+
+    function start() {
+      ensure();
+      if (!ctx) return;
+      if (ctx.state === "suspended") ctx.resume();
+      if (!started) {
+        started = true;
+        startDrone();
+        startMelody();
+      }
+    }
+
+    // Light shimmer while scratching (throttled so it stays soft).
+    function scratch() {
+      if (!ctx || muted) return;
+      const now = ctx.currentTime;
+      if (now - scratchLast < 0.05) return; // throttle
+      scratchLast = now;
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      const f = SCALE[(Math.random() * SCALE.length) | 0] * 2;
+      osc.frequency.setValueAtTime(f + Math.random() * 40, now);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.05, now + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    }
+
+    // One soft bell/pluck note.
+    function note(freq, when, dur, vol, type) {
+      const osc = ctx.createOscillator();
+      osc.type = type || "sine";
+      osc.frequency.value = freq;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.exponentialRampToValueAtTime(vol, when + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(when);
+      osc.stop(when + dur + 0.05);
+    }
+
+    // Warm reveal flourish: a shehnai-like swell + an ascending bell cascade.
+    function reveal() {
+      if (!ctx) return;
+      if (ctx.state === "suspended") ctx.resume();
+      const now = ctx.currentTime;
+
+      // shehnai-like swell (reedy sawtooth with soft attack/release)
+      const swell = ctx.createOscillator();
+      swell.type = "sawtooth";
+      swell.frequency.setValueAtTime(392.0, now);
+      swell.frequency.linearRampToValueAtTime(523.25, now + 0.9);
+      const sg = ctx.createGain();
+      sg.gain.setValueAtTime(0.0001, now);
+      sg.gain.exponentialRampToValueAtTime(0.08, now + 0.25);
+      sg.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 1800;
+      swell.connect(lp);
+      lp.connect(sg);
+      sg.connect(master);
+      swell.start(now);
+      swell.stop(now + 1.7);
+
+      // ascending bell cascade
+      const cascade = [0, 1, 2, 3, 4, 5];
+      cascade.forEach((i, idx) => {
+        note(SCALE[i] * 2, now + 0.12 + idx * 0.12, 0.9, 0.08, "sine");
+      });
+      // a couple of sparkly high notes to finish
+      note(SCALE[5] * 4, now + 0.9, 1.2, 0.05, "triangle");
+      note(SCALE[3] * 4, now + 1.1, 1.2, 0.045, "triangle");
+    }
+
+    function toggleMute() {
+      muted = !muted;
+      if (master) {
+        master.gain.cancelScheduledValues(ctx.currentTime);
+        master.gain.linearRampToValueAtTime(muted ? 0 : 0.9, ctx.currentTime + 0.2);
+      }
+      return muted;
+    }
+
+    return { start, scratch, reveal, toggleMute, isMuted: () => muted };
+  })();
 
   function showStep(id) {
     $$("#guest-view .step").forEach(hide);
@@ -179,6 +376,7 @@
     hide($("#name-error"));
     state.name = val;
     setGreeting();
+    audio.start(); // first user interaction — safe to begin ambient music
     showStep("#step-choose");
   });
   $("#guest-name").addEventListener("keydown", (e) => {
@@ -245,6 +443,7 @@
   function popBalloon(btn, isWinner) {
     btn.classList.add("popped");
     burstConfetti(40);
+    audio.scratch(); // soft chime on each pop
     if (isWinner) {
       setTimeout(() => doReveal(), 350);
     }
@@ -285,11 +484,9 @@
     ctx.lineWidth = 3;
     ctx.strokeRect(8, 8, cssW - 16, cssH - 16);
     ctx.fillStyle = "#f4d58d";
-    ctx.font = "bold 22px 'Noto Serif Bengali', serif";
+    ctx.font = "600 18px 'Segoe UI', sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("নিমন্ত্রণ", cssW / 2, cssH / 2 - 8);
-    ctx.font = "600 14px 'Segoe UI', sans-serif";
-    ctx.fillText("Scratch to reveal", cssW / 2, cssH / 2 + 16);
+    ctx.fillText("Scratch to reveal", cssW / 2, cssH / 2 + 4);
     ctx.globalCompositeOperation = "destination-out";
 
     let drawing = false;
@@ -310,6 +507,7 @@
       ctx.beginPath();
       ctx.arc(x, y, brush, 0, Math.PI * 2);
       ctx.fill();
+      audio.scratch(); // soft shimmer as they scratch
       if (!cleared && clearedEnough(ctx, canvas)) {
         cleared = true;
         setTimeout(() => doReveal(), 300);
@@ -337,26 +535,114 @@
   }
 
   // ---- Reveal ----
+  // Illustrated swaddled baby — blue cap for boy, pink cap + bow & flower for girl.
+  function babySVG(isBoy) {
+    const blanket = isBoy ? "#4a7fd1" : "#e85a8a";
+    const blanketLine = isBoy ? "#2f5fa8" : "#c23a6b";
+    const glow = isBoy ? "#eaf2ff" : "#fdeef4";
+    const cheek = isBoy ? "#ffb3a1" : "#ff8fb0";
+    const girlExtras = isBoy
+      ? ""
+      : `
+        <g transform="translate(0,-50)">
+          <path d="M0 0 L-16 -8 L-16 8 Z" fill="#e9b949"/>
+          <path d="M0 0 L16 -8 L16 8 Z" fill="#e9b949"/>
+          <circle r="5" fill="#d49a2a"/>
+        </g>
+        <g transform="translate(-22,-30)">
+          <circle r="4" fill="#fff"/>
+          <circle cx="-5" cy="0" r="3" fill="#ffd1e8"/>
+          <circle cx="5" cy="0" r="3" fill="#ffd1e8"/>
+          <circle cx="0" cy="-5" r="3" fill="#ffd1e8"/>
+          <circle cx="0" cy="5" r="3" fill="#ffd1e8"/>
+          <circle r="2" fill="#e9b949"/>
+        </g>`;
+    const boyPom = isBoy ? `<circle cx="0" cy="-50" r="6" fill="#e9b949"/>` : "";
+    return `
+      <svg class="baby-svg" viewBox="-80 -80 160 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${isBoy ? "A baby boy" : "A baby girl"}">
+        <circle cx="0" cy="0" r="74" fill="${glow}"/>
+        <path d="M-54 44 Q-60 -6 0 -14 Q60 -6 54 44 Q0 70 -54 44 Z" fill="${blanket}"/>
+        <path d="M-54 44 Q-60 -6 0 -14 Q60 -6 54 44 Q0 70 -54 44 Z" fill="none" stroke="${blanketLine}" stroke-width="2"/>
+        <path d="M-40 20 Q0 36 40 20" fill="none" stroke="${blanketLine}" stroke-width="2" opacity="0.6"/>
+        <circle cx="0" cy="-8" r="34" fill="#ffd9b8"/>
+        <path d="M-34 -10 Q-36 -48 0 -50 Q36 -48 34 -10 Q0 -22 -34 -10 Z" fill="${blanket}"/>
+        <path d="M-34 -10 Q0 -22 34 -10" fill="none" stroke="${blanketLine}" stroke-width="2"/>
+        ${boyPom}
+        ${girlExtras}
+        <path d="M-14 -8 q4 4 8 0" fill="none" stroke="#5a3a22" stroke-width="2" stroke-linecap="round"/>
+        <path d="M6 -8 q4 4 8 0" fill="none" stroke="#5a3a22" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="-18" cy="2" r="5" fill="${cheek}" opacity="0.6"/>
+        <circle cx="18" cy="2" r="5" fill="${cheek}" opacity="0.6"/>
+        <path d="M-7 8 q7 7 14 0" fill="none" stroke="#5a3a22" stroke-width="2" stroke-linecap="round"/>
+      </svg>`;
+  }
+
   function doReveal() {
     if (state.revealed) return;
     state.revealed = true;
     const isBoy = state.answer === "boy";
-    $("#reveal-badge").textContent = isBoy ? "👦" : "👧";
+    const badge = $("#reveal-badge");
+    badge.innerHTML = babySVG(isBoy);
+    badge.classList.add("baby-badge");
     const title = $("#reveal-title");
     title.textContent = isBoy ? "It's a Boy! 💙" : "It's a Girl! 💗";
     title.className = isBoy ? "theme-boy" : "theme-girl";
     const bn = $("#reveal-bn");
     if (bn) {
-      bn.textContent = isBoy ? "চ্ছেলে হবে! 💙" : "মেয়ে হবে! 💗";
+      bn.textContent = isBoy ? "ছেলে হয়েছে! 💙" : "মেয়ে হয়েছে! 💗";
       bn.className = "bn-reveal " + (isBoy ? "theme-boy" : "theme-girl");
     }
     $("#reveal-sub").textContent =
-      "Ratish & Sohani er ghor alo kore ashche. Shobar aashirbad chai 🙏";
+      "রতীশ ও সোহানির ঘর আলো করে এসেছে। সবার আশীর্বাদ চাই 🙏";
     showStep("#step-reveal");
+    audio.reveal(); // warm shehnai-like flourish + bell cascade
     bigCelebration(isBoy);
   }
 
-  $("#to-wish").addEventListener("click", () => showStep("#step-wish"));
+  // ---- Pre-written blessing suggestions (English + Bengali) ----
+  // Edit this list to change the quick-pick blessings guests can tap.
+  const WISH_SUGGESTIONS = [
+    { en: "Congratulations! Lots of love for the little one 💕", bn: "অনেক শুভেচ্ছা ও ভালোবাসা ছোট্ট সোনার জন্য 💕" },
+    { en: "Welcome to the world, little angel! 👶", bn: "পৃথিবীতে স্বাগতম, ছোট্ট সোনা! 👶" },
+    { en: "May the baby be blessed with health & happiness 🙏", bn: "শিশুটি সুস্থ ও সুখী হয়ে উঠুক — এই আশীর্বাদ রইল 🙏" },
+    { en: "So happy for you both! God bless the family 🌸", bn: "তোমাদের জন্য ভীষণ আনন্দিত! ঈশ্বর পরিবারকে আশীর্বাদ করুন 🌸" },
+    { en: "A new star has arrived in your home ⭐", bn: "তোমাদের ঘরে এক নতুন তারা এসেছে ⭐" },
+    { en: "Dugga Dugga! Stay blessed, little one 🪷", bn: "দুগ্গা দুগ্গা! ভালো থেকো সোনা 🪷" },
+    { en: "Many many congratulations to the new parents! 🎉", bn: "নতুন বাবা-মাকে অনেক অনেক অভিনন্দন! 🎉" },
+    { en: "Lots of bhalobasha for the newest member 💐", bn: "পরিবারের নতুন সদস্যের জন্য অনেক ভালোবাসা 💐" },
+  ];
+
+  function renderSuggestions() {
+    const box = $("#wish-suggestions");
+    if (!box || box.childElementCount) return; // build once
+    WISH_SUGGESTIONS.forEach((s) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip";
+      chip.innerHTML =
+        escapeText(s.en) + '<span class="chip-bn">' + escapeText(s.bn) + "</span>";
+      chip.addEventListener("click", () => {
+        const ta = $("#wish-text");
+        ta.value = s.en + " " + s.bn;
+        ta.focus();
+        $$("#wish-suggestions .chip").forEach((c) => c.classList.remove("active"));
+        chip.classList.add("active");
+      });
+      box.appendChild(chip);
+    });
+  }
+
+  // Tiny HTML-escaper so suggestion text is inserted safely.
+  function escapeText(str) {
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  $("#to-wish").addEventListener("click", () => {
+    renderSuggestions();
+    showStep("#step-wish");
+  });
 
   // Step 5: submit wish
   $("#submit-wish").addEventListener("click", async () => {
@@ -380,7 +666,7 @@
       statusEl.className = "status error";
       return;
     }
-    await renderWall("#wish-wall", fetchMyWishes, "Your wish is in. Only you can see it here. 💌");
+    await renderWall("#wish-wall", fetchMyWishes, "Your blessing is in. Only you can see it here. 💌");
     showStep("#step-thanks");
     burstConfetti(60);
   });
@@ -581,6 +867,17 @@
   // ============================================================
   //  INIT
   // ============================================================
+  // ---- Sound toggle button ----
+  const soundBtn = $("#sound-toggle");
+  if (soundBtn) {
+    soundBtn.addEventListener("click", () => {
+      audio.start(); // ensure context exists (also a valid user gesture)
+      const nowMuted = audio.toggleMute();
+      soundBtn.textContent = nowMuted ? "🔇" : "🔊";
+      soundBtn.classList.toggle("muted", nowMuted);
+    });
+  }
+
   (async function init() {
     state.answer = await fetchAnswer();
     showStep("#step-name");
