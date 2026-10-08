@@ -100,8 +100,26 @@
     }
   }
 
+  // Stable per-device/person id so a guest can see only their own wishes.
+  function getDeviceId() {
+    let id = localStorage.getItem("gr_device_id");
+    if (!id) {
+      id =
+        (crypto.randomUUID && crypto.randomUUID()) ||
+        "d-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+      localStorage.setItem("gr_device_id", id);
+    }
+    return id;
+  }
+
   async function addWish(name, message) {
-    const row = { name, message, created_at: new Date().toISOString() };
+    const deviceId = getDeviceId();
+    const row = {
+      name,
+      message,
+      device_id: deviceId,
+      created_at: new Date().toISOString(),
+    };
     // local fallback copy
     try {
       const list = JSON.parse(localStorage.getItem("gr_wishes") || "[]");
@@ -109,13 +127,38 @@
       localStorage.setItem("gr_wishes", JSON.stringify(list));
     } catch {}
     if (sb) {
-      const { error } = await sb.from("wishes").insert({ name, message });
+      const { error } = await sb
+        .from("wishes")
+        .insert({ name, message, device_id: deviceId });
       if (error) {
         console.error("addWish failed", error);
         return false;
       }
     }
     return true;
+  }
+
+  // Only the wishes created from THIS device (what a guest may see).
+  async function fetchMyWishes() {
+    const deviceId = getDeviceId();
+    if (sb) {
+      try {
+        const { data, error } = await sb
+          .from("wishes")
+          .select("name, message, created_at")
+          .eq("device_id", deviceId)
+          .order("created_at", { ascending: false });
+        if (!error && data) return data;
+      } catch (e) {
+        console.error("fetchMyWishes failed", e);
+      }
+    }
+    try {
+      const list = JSON.parse(localStorage.getItem("gr_wishes") || "[]");
+      return list.filter((w) => w.device_id === deviceId);
+    } catch {
+      return [];
+    }
   }
 
   // ============================================================
@@ -309,17 +352,19 @@
       statusEl.className = "status error";
       return;
     }
-    await renderWall("#wish-wall");
+    await renderWall("#wish-wall", fetchMyWishes, "Your wish is in. Only you can see it here. 💌");
     showStep("#step-thanks");
     burstConfetti(60);
   });
 
-  async function renderWall(sel) {
+  async function renderWall(sel, source, emptyMsg) {
     const wall = $(sel);
-    wall.innerHTML = "<li class='empty'>Loading wishes…</li>";
-    const wishes = await fetchWishes();
+    source = source || fetchWishes;
+    wall.innerHTML = "<li class='empty'>Loading…</li>";
+    const wishes = await source();
     if (!wishes.length) {
-      wall.innerHTML = "<li class='empty'>No wishes yet. Be the first! 💌</li>";
+      wall.innerHTML =
+        "<li class='empty'>" + (emptyMsg || "No wishes yet. 💌") + "</li>";
       return;
     }
     wall.innerHTML = "";
@@ -342,14 +387,28 @@
   // ============================================================
   const adminView = $("#admin-view");
 
-  $("#open-admin").addEventListener("click", () => {
+  function openAdmin() {
     hide($("#guest-view"));
     show(adminView);
-  });
-  $("#close-admin").addEventListener("click", () => {
+  }
+  function closeAdmin() {
     hide(adminView);
     show($("#guest-view"));
-  });
+    // clear the hash so refreshing doesn't reopen admin
+    if (location.hash === "#admin") {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+  }
+
+  // Hidden entry point: visit the page with #admin in the URL.
+  function checkAdminHash() {
+    if (location.hash.toLowerCase() === "#admin") openAdmin();
+  }
+  window.addEventListener("hashchange", checkAdminHash);
+
+  const openAdminBtn = $("#open-admin");
+  if (openAdminBtn) openAdminBtn.addEventListener("click", openAdmin);
+  $("#close-admin").addEventListener("click", closeAdmin);
 
   $("#admin-login-btn").addEventListener("click", () => {
     const pass = $("#admin-pass").value;
@@ -380,7 +439,9 @@
     });
   });
 
-  $("#refresh-wishes").addEventListener("click", () => renderWall("#admin-wish-wall"));
+  $("#refresh-wishes").addEventListener("click", () =>
+    renderWall("#admin-wish-wall", fetchWishes, "No wishes yet.")
+  );
 
   async function refreshAdmin() {
     const answer = await fetchAnswer();
@@ -389,7 +450,7 @@
     $$(".answer-choice").forEach((b) =>
       b.classList.toggle("active", b.dataset.answer === answer)
     );
-    await renderWall("#admin-wish-wall");
+    await renderWall("#admin-wish-wall", fetchWishes, "No wishes yet.");
   }
 
   // ============================================================
@@ -470,5 +531,6 @@
   (async function init() {
     state.answer = await fetchAnswer();
     showStep("#step-name");
+    checkAdminHash(); // open admin if the URL already has #admin
   })();
 })();

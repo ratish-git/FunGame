@@ -14,12 +14,18 @@ values (1, 'girl')
 on conflict (id) do nothing;
 
 -- 2) wishes: one row per guest wish
+--    device_id ties a wish to the device/person that submitted it, so a guest
+--    can see only their own wishes on the wall while the admin sees them all.
 create table if not exists public.wishes (
   id         bigint generated always as identity primary key,
   name       text not null,
   message    text not null,
+  device_id  text,
   created_at timestamptz not null default now()
 );
+
+-- If you already created the wishes table before adding privacy, add the column:
+alter table public.wishes add column if not exists device_id text;
 
 -- ============================================================
 --  Row Level Security
