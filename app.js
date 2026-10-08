@@ -48,6 +48,7 @@
   const audio = (function () {
     let ctx = null;
     let master = null;
+    let bed = null; // background layers (drone + melody) route through here so we can duck them
     let droneGain = null;
     let muted = false;
     let started = false;
@@ -64,6 +65,21 @@
       master = ctx.createGain();
       master.gain.value = muted ? 0 : 0.9;
       master.connect(ctx.destination);
+      // background bed (ducked during the baby cry); effects bypass this.
+      bed = ctx.createGain();
+      bed.gain.value = 1;
+      bed.connect(master);
+    }
+
+    // Temporarily lower the background music, then bring it back.
+    function duckBed(downFor, holdFor) {
+      if (!ctx || !bed) return;
+      const now = ctx.currentTime;
+      bed.gain.cancelScheduledValues(now);
+      bed.gain.setValueAtTime(bed.gain.value, now);
+      bed.gain.linearRampToValueAtTime(0.0001, now + downFor);       // fade out
+      bed.gain.setValueAtTime(0.0001, now + downFor + holdFor);      // stay quiet
+      bed.gain.linearRampToValueAtTime(1, now + downFor + holdFor + 0.8); // fade back
     }
 
     // Gentle tanpura-like drone (two detuned low notes + slow shimmer).
@@ -71,7 +87,7 @@
       if (!ctx || droneGain) return;
       droneGain = ctx.createGain();
       droneGain.gain.value = 0;
-      droneGain.connect(master);
+      droneGain.connect(bed);
       // soft fade-in
       droneGain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 2.5);
 
@@ -122,7 +138,7 @@
       osc.connect(lp);
       osc2.connect(lp);
       lp.connect(g);
-      g.connect(master);
+      g.connect(bed); // melody is part of the background bed (ducks for the cry)
       osc.start(now);
       osc2.start(now);
       osc.stop(now + 1.5);
@@ -146,14 +162,13 @@
     }
 
     function start() {
+      // Background music removed — only the baby cry is used now.
+      // We still create the audio context on first user gesture so the
+      // cry can play later without autoplay restrictions.
       ensure();
       if (!ctx) return;
       if (ctx.state === "suspended") ctx.resume();
-      if (!started) {
-        started = true;
-        startDrone();
-        startMelody();
-      }
+      started = true;
     }
 
     // Light shimmer while scratching (throttled so it stays soft).
@@ -225,6 +240,50 @@
       note(SCALE[3] * 4, now + 1.1, 1.2, 0.045, "triangle");
     }
 
+    // A short, gentle synthesized newborn "waa-waa" cry.
+    // Each wail is a soft pitch sweep up then down, with a vocal-ish formant filter.
+    function babyCry() {
+      if (!ctx || muted) return;
+      const base = ctx.currentTime + 0.15;
+      // nine little wails: waa-waa-waa-waa-waa-waa-waa-waa-waa
+      const wails = [];
+      for (let n = 0; n < 9; n++) wails.push(n * 0.5);
+      wails.forEach((offset, i) => {
+        const t = base + offset;
+        const osc = ctx.createOscillator();
+        osc.type = "sawtooth";
+        // pitch arc: rise then fall, like "waaa" — gently varied per wail
+        const peak = 600 + (i % 3) * 30 - (i % 2) * 20;
+        osc.frequency.setValueAtTime(430, t);
+        osc.frequency.linearRampToValueAtTime(peak, t + 0.14);
+        osc.frequency.linearRampToValueAtTime(360, t + 0.42);
+        // light vibrato for a lifelike quiver
+        const vib = ctx.createOscillator();
+        vib.frequency.value = 12;
+        const vibGain = ctx.createGain();
+        vibGain.gain.value = 14;
+        vib.connect(vibGain);
+        vibGain.connect(osc.frequency);
+        // vocal-ish formant
+        const bp = ctx.createBiquadFilter();
+        bp.type = "bandpass";
+        bp.frequency.value = 900;
+        bp.Q.value = 6;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.07, t + 0.08);
+        g.gain.setValueAtTime(0.07, t + 0.3);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.46);
+        osc.connect(bp);
+        bp.connect(g);
+        g.connect(master);
+        osc.start(t);
+        osc.stop(t + 0.5);
+        vib.start(t);
+        vib.stop(t + 0.5);
+      });
+    }
+
     function toggleMute() {
       muted = !muted;
       if (master) {
@@ -234,7 +293,15 @@
       return muted;
     }
 
-    return { start, scratch, reveal, toggleMute, isMuted: () => muted };
+    return {
+      start,
+      scratch,
+      reveal,
+      babyCry,
+      duckBackground: duckBed,
+      toggleMute,
+      isMuted: () => muted,
+    };
   })();
 
   function showStep(id) {
@@ -443,7 +510,6 @@
   function popBalloon(btn, isWinner) {
     btn.classList.add("popped");
     burstConfetti(40);
-    audio.scratch(); // soft chime on each pop
     if (isWinner) {
       setTimeout(() => doReveal(), 350);
     }
@@ -507,7 +573,6 @@
       ctx.beginPath();
       ctx.arc(x, y, brush, 0, Math.PI * 2);
       ctx.fill();
-      audio.scratch(); // soft shimmer as they scratch
       if (!cleared && clearedEnough(ctx, canvas)) {
         cleared = true;
         setTimeout(() => doReveal(), 300);
@@ -595,7 +660,7 @@
     $("#reveal-sub").textContent =
       "রতীশ ও সোহানির ঘর আলো করে এসেছে। সবার আশীর্বাদ চাই 🙏";
     showStep("#step-reveal");
-    audio.reveal(); // warm shehnai-like flourish + bell cascade
+    setTimeout(() => audio.babyCry(), 700); // gentle newborn cry as the baby appears
     bigCelebration(isBoy);
   }
 
