@@ -3,59 +3,73 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#ffd1e8" />
-  <title>Ratish &amp; Sohani — Gender Reveal 🎉</title>
-  <meta name="description" content="Join Ratish & Sohani's gender reveal! Pop a balloon or scratch the card to find out, and leave your wishes." />
+  <meta name="theme-color" content="#7a0f2b" />
+  <title>Ratish &amp; Sohani — আশীর্বাদ · Gender Reveal</title>
+  <meta name="description" content="Ratish & Sohani's Aashirbad gender reveal. Open the kulo or scratch the nimontron patra to find out, and leave your blessings. আপনার আশীর্বাদ দিন।" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;700&family=Noto+Serif+Bengali:wght@500;700&family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <canvas id="confetti-canvas" aria-hidden="true"></canvas>
 
+  <!-- Decorative alpana corners (CSS-drawn) -->
+  <div class="alpana alpana-tl" aria-hidden="true"></div>
+  <div class="alpana alpana-tr" aria-hidden="true"></div>
+  <div class="alpana alpana-bl" aria-hidden="true"></div>
+  <div class="alpana alpana-br" aria-hidden="true"></div>
+
   <!-- ===== GUEST VIEW ===== -->
   <main id="guest-view" class="screen">
     <header class="hero">
-      <div class="hero-emoji" aria-hidden="true">🎈🎉👶</div>
+      <div class="hero-emoji" aria-hidden="true">🪷</div>
+      <p class="hero-bengali">শুভ আশীর্বাদ</p>
       <h1 class="couple">Ratish <span>&amp;</span> Sohani</h1>
-      <p class="tagline">Boy or Girl? Come find out!</p>
+      <p class="tagline">Chhele na Meye? Ebar jana jak! <span class="tagline-sub">Boy or Girl — let's find out</span></p>
     </header>
 
     <!-- Step 1: Name -->
     <section id="step-name" class="card step">
-      <h2>Welcome! 💕</h2>
-      <p>Enter your name to join the reveal.</p>
-      <input id="guest-name" type="text" placeholder="Your name" maxlength="40" autocomplete="name" />
-      <button id="name-continue" class="btn btn-primary">Let's go! 🎈</button>
-      <p id="name-error" class="error" hidden>Please enter your name first.</p>
+      <div class="motif" aria-hidden="true">🪔</div>
+      <h2>Nomoshkar! 🙏</h2>
+      <p>Enter your name to join the Aashirbad. <span class="bn">আপনার নাম লিখুন।</span></p>
+      <input id="guest-name" type="text" placeholder="Your name / আপনার নাম" maxlength="40" autocomplete="name" />
+      <button id="name-continue" class="btn btn-primary">Cholo shuru kori 🪷</button>
+      <p id="name-error" class="error" hidden>Please enter your name first. <span class="bn">আগে নাম লিখুন।</span></p>
     </section>
 
     <!-- Step 2: Choose reveal style -->
     <section id="step-choose" class="card step" hidden>
-      <h2>Hi <span class="guest-greet"></span>! 👋</h2>
-      <p>How do you want to reveal the surprise?</p>
+      <div class="motif" aria-hidden="true">🌼</div>
+      <h2>Nomoshkar, <span class="guest-greet"></span>! 👋</h2>
+      <p>How would you like to give your Aashirbad? <span class="bn">কীভাবে আশীর্বাদ দেবেন?</span></p>
       <div class="choice-grid">
         <button class="choice" data-mode="balloon">
-          <span class="choice-emoji">🎈</span>
-          <span>Pop a Balloon</span>
+          <span class="choice-emoji">🪔</span>
+          <span>Open the Kulo</span>
+          <span class="bn-small">কুলো খুলুন</span>
         </button>
         <button class="choice" data-mode="scratch">
-          <span class="choice-emoji">🎟️</span>
-          <span>Scratch the Card</span>
+          <span class="choice-emoji">💌</span>
+          <span>Nimontron Patra</span>
+          <span class="bn-small">নিমন্ত্রণপত্র</span>
         </button>
       </div>
     </section>
 
-    <!-- Step 3a: Balloon pop -->
+    <!-- Step 3a: Kulo / Kalash tap -->
     <section id="step-balloon" class="card step" hidden>
-      <h2>Pop the balloons! 🎈</h2>
-      <p>Tap balloons to pop them. The surprise is hiding inside one!</p>
-      <div id="balloon-field" class="balloon-field" role="group" aria-label="Balloons to pop"></div>
+      <h2>Open the Kulo 🪔</h2>
+      <p>Tap the decorated kulo &amp; kalash to receive the blessing. <span class="bn">কুলোয় ছোঁয়া দিন।</span></p>
+      <div id="balloon-field" class="balloon-field" role="group" aria-label="Decorated kulos to open"></div>
     </section>
 
-    <!-- Step 3b: Scratch card -->
+    <!-- Step 3b: Nimontron Patra scratch card -->
     <section id="step-scratch" class="card step" hidden>
-      <h2>Scratch to reveal 🎟️</h2>
-      <p>Drag your finger or mouse across the card.</p>
+      <h2>Nimontron Patra 💌</h2>
+      <p>Gently scratch the invitation to reveal. <span class="bn">আঙুল বুলিয়ে খুলুন।</span></p>
       <div class="scratch-wrap">
         <div id="scratch-result" class="scratch-result"></div>
         <canvas id="scratch-canvas" width="320" height="200"></canvas>
@@ -66,25 +80,27 @@
     <section id="step-reveal" class="card step" hidden>
       <div id="reveal-badge" class="reveal-badge" aria-live="polite"></div>
       <h2 id="reveal-title"></h2>
+      <p id="reveal-bn" class="bn-reveal"></p>
       <p id="reveal-sub"></p>
-      <button id="to-wish" class="btn btn-primary">Leave a wish 💌</button>
+      <button id="to-wish" class="btn btn-primary">Ashirbad din 💌</button>
     </section>
 
     <!-- Step 5: Wish -->
     <section id="step-wish" class="card step" hidden>
-      <h2>Leave your wish 💌</h2>
-      <p>Share a message for Ratish &amp; Sohani and the little one.</p>
-      <textarea id="wish-text" placeholder="Write your wish here..." maxlength="300" rows="4"></textarea>
-      <button id="submit-wish" class="btn btn-primary">Send wish ✨</button>
+      <div class="motif" aria-hidden="true">🌾</div>
+      <h2>Give your blessing 💌</h2>
+      <p>Share a wish for Ratish &amp; Sohani and the little one. <span class="bn">ছোট্ট সোনার জন্য আশীর্বাদ লিখুন।</span></p>
+      <textarea id="wish-text" placeholder="Lots of bhalobasha for the little one... / এখানে লিখুন" maxlength="300" rows="4"></textarea>
+      <button id="submit-wish" class="btn btn-primary">Pathiye din ✨</button>
       <p id="wish-status" class="status" hidden></p>
     </section>
 
     <!-- Step 6: Thank you + wall of wishes -->
     <section id="step-thanks" class="card step" hidden>
-      <div class="hero-emoji" aria-hidden="true">💖</div>
-      <h2>Thank you, <span class="guest-greet"></span>!</h2>
-      <p>Your wish has been added to the wall.</p>
-      <h3 class="wall-title">Wishes from everyone 💐</h3>
+      <div class="hero-emoji" aria-hidden="true">🙏</div>
+      <h2>Dhonnobad, <span class="guest-greet"></span>!</h2>
+      <p>Your blessing has been received. <span class="bn">আপনার আশীর্বাদ পৌঁছে গেছে।</span></p>
+      <h3 class="wall-title">Your Aashirbad 💐</h3>
       <ul id="wish-wall" class="wish-wall"></ul>
     </section>
 
@@ -95,7 +111,8 @@
   <!-- ===== ADMIN VIEW ===== -->
   <section id="admin-view" class="screen" hidden>
     <div class="card">
-      <h2>Admin 🔐</h2>
+      <div class="motif" aria-hidden="true">🔐</div>
+      <h2>Admin</h2>
 
       <div id="admin-login">
         <p>Enter the admin password.</p>
@@ -110,19 +127,21 @@
         <div class="choice-grid">
           <button class="choice answer-choice" data-answer="boy">
             <span class="choice-emoji">👦</span><span>It's a Boy</span>
+            <span class="bn-small">চ্ছেলে</span>
           </button>
           <button class="choice answer-choice" data-answer="girl">
             <span class="choice-emoji">👧</span><span>It's a Girl</span>
+            <span class="bn-small">মেয়ে</span>
           </button>
         </div>
         <p id="answer-status" class="status">Current answer: <strong id="current-answer">loading…</strong></p>
 
-        <h3 class="wall-title">Guest wishes</h3>
+        <h3 class="wall-title">Guest wishes (all)</h3>
         <button id="refresh-wishes" class="btn btn-secondary">Refresh</button>
         <ul id="admin-wish-wall" class="wish-wall"></ul>
       </div>
 
-      <button id="close-admin" class="link-btn">← Back to party</button>
+      <button id="close-admin" class="link-btn">← Back to the Aashirbad</button>
     </div>
   </section>
 

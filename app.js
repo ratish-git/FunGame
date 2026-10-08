@@ -200,16 +200,29 @@
     });
   });
 
-  // ---- Balloon pop ----
-  const BALLOON_COLORS = ["#ff6fa5", "#6fb7ff", "#ffd166", "#8ce99a", "#b197fc", "#ffa94d"];
+  // ---- Kulo / Kalash tap (festive Bengali palette) ----
+  // Marigold, maroon, gold, terracotta, green leaf — the colours of a Bengali celebration.
+  const BALLOON_COLORS = ["#f5a623", "#e67e22", "#c0392b", "#e9b949", "#2e7d32", "#8e24aa"];
 
+  // A decorated kalash (pot) with mango leaves and a coconut, set on a kulo (fan).
   function balloonSVG(color) {
     return `
-      <svg viewBox="0 0 70 90" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="35" cy="38" rx="30" ry="36" fill="${color}" />
-        <ellipse cx="25" cy="26" rx="8" ry="12" fill="rgba(255,255,255,0.35)" />
-        <polygon points="35,72 30,80 40,80" fill="${color}" />
-        <line x1="35" y1="80" x2="35" y2="90" stroke="#aaa" stroke-width="1.5" />
+      <svg viewBox="0 0 90 110" xmlns="http://www.w3.org/2000/svg">
+        <!-- kulo (winnowing fan) backdrop -->
+        <ellipse cx="45" cy="70" rx="42" ry="34" fill="#e9c37a" stroke="#b8862f" stroke-width="2"/>
+        <ellipse cx="45" cy="70" rx="42" ry="34" fill="none" stroke="#fff3d6" stroke-width="1" stroke-dasharray="3 4"/>
+        <!-- kalash (pot) -->
+        <path d="M30 58 Q25 40 45 38 Q65 40 60 58 L58 86 Q45 94 32 86 Z" fill="${color}" stroke="#7a0f2b" stroke-width="2"/>
+        <rect x="31" y="52" width="28" height="6" rx="3" fill="#e9b949"/>
+        <!-- swastika/dot motif on the pot -->
+        <circle cx="45" cy="70" r="4" fill="#fff3d6"/>
+        <!-- mango leaves around the rim -->
+        <path d="M34 40 Q28 30 36 26 Q40 34 38 42 Z" fill="#2e7d32"/>
+        <path d="M56 40 Q62 30 54 26 Q50 34 52 42 Z" fill="#2e7d32"/>
+        <path d="M45 38 Q45 26 45 22" stroke="#2e7d32" stroke-width="2" fill="none"/>
+        <!-- coconut on top -->
+        <ellipse cx="45" cy="20" rx="9" ry="10" fill="#8d5a2b" stroke="#5c3a1a" stroke-width="1.5"/>
+        <path d="M45 11 Q48 6 45 2 Q42 6 45 11" fill="#5c3a1a"/>
       </svg>`;
   }
 
@@ -223,7 +236,7 @@
       b.className = "balloon";
       b.style.animationDelay = (i % 3) * 0.3 + "s";
       b.innerHTML = balloonSVG(BALLOON_COLORS[i % BALLOON_COLORS.length]);
-      b.setAttribute("aria-label", "Balloon");
+      b.setAttribute("aria-label", "Decorated kulo and kalash");
       b.addEventListener("click", () => popBalloon(b, i === winner));
       field.appendChild(b);
     }
@@ -261,13 +274,22 @@
     result.innerHTML = `<div style="font-size:52px">${isBoy ? "👦" : "👧"}</div>
       <div class="${isBoy ? "theme-boy" : "theme-girl"}">${isBoy ? "It's a Boy!" : "It's a Girl!"}</div>`;
 
-    // scratch-off cover (drawn in CSS-pixel coordinates)
-    ctx.fillStyle = "#c9a0dc";
+    // scratch-off cover styled like a nimontron patra (invitation)
+    const grad = ctx.createLinearGradient(0, 0, cssW, cssH);
+    grad.addColorStop(0, "#7a0f2b");
+    grad.addColorStop(1, "#5c0a20");
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, cssW, cssH);
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.font = "bold 20px Segoe UI, sans-serif";
+    // gold border hint
+    ctx.strokeStyle = "rgba(233,185,73,0.9)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(8, 8, cssW - 16, cssH - 16);
+    ctx.fillStyle = "#f4d58d";
+    ctx.font = "bold 22px 'Noto Serif Bengali', serif";
     ctx.textAlign = "center";
-    ctx.fillText("Scratch here!", cssW / 2, cssH / 2);
+    ctx.fillText("নিমন্ত্রণ", cssW / 2, cssH / 2 - 8);
+    ctx.font = "600 14px 'Segoe UI', sans-serif";
+    ctx.fillText("Scratch to reveal", cssW / 2, cssH / 2 + 16);
     ctx.globalCompositeOperation = "destination-out";
 
     let drawing = false;
@@ -323,7 +345,13 @@
     const title = $("#reveal-title");
     title.textContent = isBoy ? "It's a Boy! 💙" : "It's a Girl! 💗";
     title.className = isBoy ? "theme-boy" : "theme-girl";
-    $("#reveal-sub").textContent = "Ratish & Sohani can't wait to meet their little one!";
+    const bn = $("#reveal-bn");
+    if (bn) {
+      bn.textContent = isBoy ? "চ্ছেলে হবে! 💙" : "মেয়ে হবে! 💗";
+      bn.className = "bn-reveal " + (isBoy ? "theme-boy" : "theme-girl");
+    }
+    $("#reveal-sub").textContent =
+      "Ratish & Sohani er ghor alo kore ashche. Shobar aashirbad chai 🙏";
     showStep("#step-reveal");
     bigCelebration(isBoy);
   }
@@ -468,36 +496,51 @@
   window.addEventListener("resize", resize);
   resize();
 
+  // Marigold (genda phool) petal colours + a few green leaves
+  const MARIGOLD = ["#f5a623", "#e67e22", "#ff8c00", "#ffb347", "#e9b949"];
+  const LEAF = ["#2e7d32", "#43a047"];
+
   function burstConfetti(count) {
     for (let i = 0; i < count; i++) {
+      const isLeaf = Math.random() < 0.15;
       pieces.push({
         x: Math.random() * canvas.width,
         y: -20,
-        r: 4 + Math.random() * 6,
-        c: BALLOON_COLORS[(Math.random() * BALLOON_COLORS.length) | 0],
+        r: 5 + Math.random() * 6,
+        c: isLeaf
+          ? LEAF[(Math.random() * LEAF.length) | 0]
+          : MARIGOLD[(Math.random() * MARIGOLD.length) | 0],
+        petal: !isLeaf,
         vx: (Math.random() - 0.5) * 4,
-        vy: 2 + Math.random() * 4,
+        vy: 2 + Math.random() * 3.5,
         rot: Math.random() * 360,
-        vr: (Math.random() - 0.5) * 20,
+        vr: (Math.random() - 0.5) * 18,
       });
     }
     if (!rafId) loop();
   }
 
+  // A gentle shower of marigold petals (genda phool) for the big reveal.
   function bigCelebration(isBoy) {
-    const themed = isBoy
-      ? ["#6fb7ff", "#cfe8ff", "#ffffff", "#4dabf7"]
-      : ["#ff6fa5", "#ffd1e8", "#ffffff", "#f783ac"];
-    for (let i = 0; i < 160; i++) {
+    const accent = isBoy ? "#4a7fd1" : "#e85a8a"; // a hint of the reveal colour
+    for (let i = 0; i < 180; i++) {
+      const roll = Math.random();
+      const isLeaf = roll < 0.12;
+      const isAccent = !isLeaf && roll > 0.9;
       pieces.push({
         x: Math.random() * canvas.width,
         y: -20 - Math.random() * canvas.height,
-        r: 4 + Math.random() * 7,
-        c: themed[(Math.random() * themed.length) | 0],
-        vx: (Math.random() - 0.5) * 5,
-        vy: 2 + Math.random() * 5,
+        r: 5 + Math.random() * 7,
+        c: isLeaf
+          ? LEAF[(Math.random() * LEAF.length) | 0]
+          : isAccent
+          ? accent
+          : MARIGOLD[(Math.random() * MARIGOLD.length) | 0],
+        petal: !isLeaf,
+        vx: (Math.random() - 0.5) * 4.5,
+        vy: 2 + Math.random() * 4,
         rot: Math.random() * 360,
-        vr: (Math.random() - 0.5) * 20,
+        vr: (Math.random() - 0.5) * 16,
       });
     }
     if (!rafId) loop();
@@ -506,14 +549,24 @@
   function loop() {
     cctx.clearRect(0, 0, canvas.width, canvas.height);
     pieces.forEach((p) => {
-      p.x += p.vx;
+      p.x += p.vx + Math.sin((p.y + p.rot) / 40) * 0.6; // gentle sway as petals fall
       p.y += p.vy;
       p.rot += p.vr;
       cctx.save();
       cctx.translate(p.x, p.y);
       cctx.rotate((p.rot * Math.PI) / 180);
       cctx.fillStyle = p.c;
-      cctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.6);
+      if (p.petal) {
+        // marigold petal: a soft rounded oval
+        cctx.beginPath();
+        cctx.ellipse(0, 0, p.r * 0.65, p.r, 0, 0, Math.PI * 2);
+        cctx.fill();
+      } else {
+        // leaf: a slim ellipse
+        cctx.beginPath();
+        cctx.ellipse(0, 0, p.r * 0.4, p.r * 1.1, 0, 0, Math.PI * 2);
+        cctx.fill();
+      }
       cctx.restore();
     });
     pieces = pieces.filter((p) => p.y < canvas.height + 30);
